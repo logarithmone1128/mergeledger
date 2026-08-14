@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mergeledger"
+version = "0.1.0"
+description = "Evidence-first contribution ledger and honest GitHub profile renderer."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "LOG" }]
+keywords = ["github", "open-source", "portfolio", "evidence", "developer-tools"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+]
+dependencies = []
+
+[project.scripts]
+mergeledger = "mergeledger.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/logarithmone1128/mergeledger"
+Issues = "https://github.com/logarithmone1128/mergeledger/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="220" viewBox="0 0 1200 220" role="img" aria-labelledby="title desc">
+  <title id="title">mergeledger evidence pipeline</title>
+  <desc id="desc">An animated evidence signal advancing from issue to verified merge.</desc>
+  <defs>
+    <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse"><path d="M24 0H0V24" fill="none" stroke="#243048" opacity=".55"/></pattern>
+    <linearGradient id="line"><stop stop-color="#55d6ff"/><stop offset=".55" stop-color="#78e9ae"/><stop offset="1" stop-color="#ffd166"/></linearGradient>
+  </defs>
+  <style>
+    .sans{font-family:Inter,ui-sans-serif,system-ui,sans-serif}.mono{font-family:"SFMono-Regular",Consolas,monospace}
+    .flow{stroke-dasharray:10 15;animation:flow 1.5s linear infinite}.pulse{animation:pulse 2s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+    @keyframes flow{to{stroke-dashoffset:-50}}@keyframes pulse{50%{r:10;opacity:1}}
+    @media(prefers-reduced-motion:reduce){*{animation:none!important}}
+  </style>
+  <rect width="1200" height="220" rx="16" fill="#0b1220"/><rect width="1200" height="220" rx="16" fill="url(#grid)"/>
+  <text class="sans" x="48" y="83" fill="#f8fafc" font-size="48" font-weight="800">mergeledger</text>
+  <text class="mono" x="50" y="119" fill="#7d8ba5" font-size="14">NO MERGE CLAIM WITHOUT MERGE EVIDENCE</text>
+  <path class="flow" d="M564 104H1134" stroke="url(#line)" stroke-width="3" fill="none"/>
+  <g class="mono" font-size="12" text-anchor="middle" fill="#cbd5e1">
+    <circle class="pulse" cx="574" cy="104" r="7" fill="#55d6ff"/><text x="574" y="145">ISSUE</text>
+    <circle class="pulse" cx="760" cy="104" r="7" fill="#66e3cf"/><text x="760" y="145">PATCH</text>
+    <circle class="pulse" cx="946" cy="104" r="7" fill="#78e9ae"/><text x="946" y="145">TEST</text>
+    <circle class="pulse" cx="1132" cy="104" r="7" fill="#ffd166"/><text x="1132" y="145">MERGE</text>
+  </g>
+</svg>

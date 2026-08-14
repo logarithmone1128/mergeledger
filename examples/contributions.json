@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "items": [
+    {
+      "owner": "example-org",
+      "repo": "agent-cli",
+      "number": 42,
+      "issue_number": 39,
+      "theme": "Least privilege",
+      "stack": "Go",
+      "change": "Made an optional integration request only the permission it uses.",
+      "verification": "focused tests, package tests, race suite",
+      "state": "under_review",
+      "merged_at": null
+    }
+  ]
+}
