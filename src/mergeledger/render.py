@@ -12,11 +12,26 @@ STATE_LABELS = {
 }
 
 
+def issue_slug(item: dict) -> str:
+    """Repository the tracking issue lives in.
+
+    Defaults to the pull request's repository, but many projects split code and
+    issues across repositories. Getting this wrong does not produce a dead link:
+    GitHub resolves ``/issues/N`` to ``/pull/N`` when that number is a pull
+    request in the repository, so the evidence link silently points at an
+    unrelated document instead.
+    """
+    owner = item.get("issue_owner") or item["owner"]
+    repo = item.get("issue_repo") or item["repo"]
+    return f"{owner}/{repo}"
+
+
 def evidence_links(item: dict) -> str:
     base = f"https://github.com/{item['owner']}/{item['repo']}"
     links: list[str] = []
     if issue_number := item.get("issue_number"):
-        links.append(f"[Issue #{issue_number}]({base}/issues/{issue_number})")
+        issue_base = f"https://github.com/{issue_slug(item)}"
+        links.append(f"[Issue #{issue_number}]({issue_base}/issues/{issue_number})")
     links.append(f"[PR #{item['number']}]({base}/pull/{item['number']})")
     links.append(item["verification"])
     return " · ".join(links)
