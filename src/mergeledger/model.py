@@ -31,6 +31,18 @@ PRIVATE_KEYS = {
 }
 EMAIL_PATTERN = re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.I)
 PHONE_PATTERN = re.compile(r"(?<![\w.])\+?\d[\d\s().-]{7,}\d(?![\w.])")
+# Timestamps, dates and versions are digit-dense and would otherwise read as phone
+# numbers. A privacy check that fires on every refreshed_at trains the reader to
+# ignore it, so strip these before scanning.
+TIMESTAMPLIKE_PATTERN = re.compile(
+    r"\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)?"
+    r"|\bv?\d+\.\d+(?:\.\d+)+\b"
+)
+
+
+def looks_like_phone(value: str) -> bool:
+    """True when a string carries a phone number rather than a timestamp."""
+    return bool(PHONE_PATTERN.search(TIMESTAMPLIKE_PATTERN.sub(" ", value)))
 
 
 class LedgerError(ValueError):
@@ -92,7 +104,7 @@ def audit_privacy(ledger: dict, private_terms: Iterable[str] = ()) -> list[str]:
             continue
         if EMAIL_PATTERN.search(value):
             findings.append(f"{path}: email address detected")
-        if PHONE_PATTERN.search(value):
+        if looks_like_phone(value):
             findings.append(f"{path}: phone number detected")
         lowered = value.lower()
         for term in terms:

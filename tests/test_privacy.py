@@ -60,3 +60,33 @@ class TestLoadPrivateTerms(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestPhoneFalsePositives(unittest.TestCase):
+    """Caught by running the checker on a real ledger: a refreshed_at timestamp
+    is digit-dense enough to look like a phone number."""
+
+    def test_iso_timestamp_is_not_a_phone_number(self):
+        from mergeledger.model import looks_like_phone
+
+        self.assertFalse(looks_like_phone("2026-08-25T02:15:37.836797+00:00"))
+
+    def test_plain_date_is_not_a_phone_number(self):
+        from mergeledger.model import looks_like_phone
+
+        self.assertFalse(looks_like_phone("merged on 2026-08-20"))
+
+    def test_version_string_is_not_a_phone_number(self):
+        from mergeledger.model import looks_like_phone
+
+        self.assertFalse(looks_like_phone("erpnext v15.115.0 and frappe 16.31.0"))
+
+    def test_a_real_phone_number_still_is(self):
+        from mergeledger.model import looks_like_phone
+
+        self.assertTrue(looks_like_phone("call +1 415 555 0100"))
+
+    def test_a_phone_number_next_to_a_timestamp_still_is(self):
+        from mergeledger.model import looks_like_phone
+
+        self.assertTrue(looks_like_phone("2026-08-25T02:15:37Z, call +1 415 555 0100"))
