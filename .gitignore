@@ -5,3 +5,8 @@ __pycache__/
 dist/
 build/
 *.egg-info/
+
+# Private term lists must never be committed -- they name exactly what the
+# public ledger is meant to keep out.
+private-terms*.txt
+.private-terms

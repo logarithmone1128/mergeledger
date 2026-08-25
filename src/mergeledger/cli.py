@@ -9,7 +9,13 @@ import sys
 from datetime import datetime, timezone
 
 from .github import refresh_item, resolve_upstream
-from .model import LedgerError, audit_ledger, require_valid_ledger, verify_ledger
+from .model import (
+    LedgerError,
+    audit_ledger,
+    load_private_terms,
+    require_valid_ledger,
+    verify_ledger,
+)
 from .render import render_cards
 
 
@@ -24,7 +30,8 @@ def write_ledger(path: pathlib.Path, ledger: dict) -> None:
 
 
 def command_audit(args: argparse.Namespace) -> int:
-    findings = audit_ledger(load_ledger(args.ledger))
+    terms = load_private_terms(getattr(args, "private_terms", None))
+    findings = audit_ledger(load_ledger(args.ledger), terms)
     if findings:
         for finding in findings:
             print(f"ERROR {finding}")
@@ -46,7 +53,8 @@ def command_render(args: argparse.Namespace) -> int:
 
 def command_verify(args: argparse.Namespace) -> int:
     ledger = load_ledger(args.ledger)
-    findings = audit_ledger(ledger) + verify_ledger(ledger, resolve_upstream)
+    terms = load_private_terms(getattr(args, "private_terms", None))
+    findings = audit_ledger(ledger, terms) + verify_ledger(ledger, resolve_upstream)
     if findings:
         for finding in findings:
             print(f"ERROR {finding}")
@@ -75,6 +83,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     audit = subparsers.add_parser("audit", help="validate claims and privacy boundaries")
     audit.add_argument("ledger", type=pathlib.Path)
+    audit.add_argument(
+        "--private-terms",
+        type=pathlib.Path,
+        help="file of terms that must never appear publicly (employer, school, city); "
+        "falls back to MERGELEDGER_PRIVATE_TERMS",
+    )
     audit.set_defaults(handler=command_audit)
 
     render = subparsers.add_parser("render", help="render Markdown contribution cards")
@@ -86,6 +100,7 @@ def build_parser() -> argparse.ArgumentParser:
         "verify", help="check every claim against GitHub and fail on any overstatement"
     )
     verify.add_argument("ledger", type=pathlib.Path)
+    verify.add_argument("--private-terms", type=pathlib.Path)
     verify.set_defaults(handler=command_verify)
 
     refresh = subparsers.add_parser("refresh", help="refresh states from GitHub")

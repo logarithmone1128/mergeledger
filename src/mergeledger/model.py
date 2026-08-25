@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import pathlib
 import re
 from collections.abc import Iterable
 
@@ -28,6 +30,7 @@ PRIVATE_KEYS = {
     "phone",
 }
 EMAIL_PATTERN = re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.I)
+PHONE_PATTERN = re.compile(r"(?<![\w.])\+?\d[\d\s().-]{7,}\d(?![\w.])")
 
 
 class LedgerError(ValueError):
@@ -44,15 +47,57 @@ def _walk(value: object, path: str = "$") -> Iterable[tuple[str, object]]:
             yield from _walk(nested, f"{path}[{index}]")
 
 
-def audit_privacy(ledger: dict) -> list[str]:
-    """Return privacy findings without mutating the ledger."""
+def load_private_terms(source: str | None = None) -> list[str]:
+    """Terms that must never appear in a public ledger -- employer, school, city,
+    internal project names.
+
+    Deliberately not read from the ledger: the ledger is the artifact that gets
+    published, so a list of private terms stored inside it would leak exactly what
+    it is meant to protect. Supply them from a local file kept out of version
+    control, or from ``MERGELEDGER_PRIVATE_TERMS`` as a newline- or
+    comma-separated value.
+    """
+    raw = ""
+    if source:
+        raw = pathlib.Path(source).read_text(encoding="utf-8")
+    else:
+        raw = os.environ.get("MERGELEDGER_PRIVATE_TERMS", "")
+    terms = []
+    for chunk in raw.replace(",", "\n").splitlines():
+        term = chunk.strip()
+        if term and not term.startswith("#"):
+            terms.append(term)
+    return terms
+
+
+def audit_privacy(ledger: dict, private_terms: Iterable[str] = ()) -> list[str]:
+    """Return privacy findings without mutating the ledger.
+
+    Structured keys and obvious patterns are only part of the risk. In practice a
+    leak arrives inside free text -- an employer named in a change description, a
+    city in a note -- so declared private terms are matched there too.
+    """
     findings: list[str] = []
+    terms = [t for t in private_terms if t]
     for path, value in _walk(ledger):
         key = path.rsplit(".", 1)[-1].lower()
         if key in PRIVATE_KEYS and value not in (None, "", [], {}):
             findings.append(f"{path}: private identity field is not allowed")
-        if isinstance(value, str) and EMAIL_PATTERN.search(value):
+        if key == "private_terms":
+            findings.append(
+                f"{path}: private terms must not be stored in the ledger; "
+                "keep them in a local file or MERGELEDGER_PRIVATE_TERMS"
+            )
+        if not isinstance(value, str):
+            continue
+        if EMAIL_PATTERN.search(value):
             findings.append(f"{path}: email address detected")
+        if PHONE_PATTERN.search(value):
+            findings.append(f"{path}: phone number detected")
+        lowered = value.lower()
+        for term in terms:
+            if term.lower() in lowered:
+                findings.append(f"{path}: private term {term!r} detected")
     return findings
 
 
@@ -79,8 +124,8 @@ def validate_item(item: dict, index: int) -> list[str]:
     return findings
 
 
-def audit_ledger(ledger: dict) -> list[str]:
-    findings = audit_privacy(ledger)
+def audit_ledger(ledger: dict, private_terms: Iterable[str] = ()) -> list[str]:
+    findings = audit_privacy(ledger, private_terms)
     if ledger.get("schema_version") != 1:
         findings.append("schema_version: only version 1 is supported")
     items = ledger.get("items")

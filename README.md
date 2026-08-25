@@ -67,6 +67,24 @@ mergeledger render contributions.json --output CONTRIBUTIONS.md
 Set `GH_TOKEN` or `GITHUB_TOKEN` to increase GitHub API limits. The token is
 read from the environment and is never written to the ledger.
 
+### Keeping a public ledger anonymous
+
+Structured checks catch a field named `employer`, but that is not how a leak
+usually arrives -- it arrives inside free text, in a change description that
+names a company, a city, or an internal project. Declare the terms that must
+never appear publicly and they are matched across every string in the ledger:
+
+```bash
+mergeledger audit contributions.json --private-terms .private-terms
+# or
+MERGELEDGER_PRIVATE_TERMS='Initech,Springfield' mergeledger audit contributions.json
+```
+
+The list is deliberately never read from the ledger itself. The ledger is the
+file that gets published, so storing private terms inside it would leak exactly
+what they are meant to protect -- `audit` reports a `private_terms` key in the
+ledger as a finding, and `.gitignore` excludes the usual local filenames.
+
 ## Claim gate
 
 The audit fails when:
