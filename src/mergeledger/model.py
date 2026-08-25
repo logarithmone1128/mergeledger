@@ -211,9 +211,12 @@ def verify_ledger(ledger: dict, resolve) -> list[str]:
         try:
             upstream_state, upstream_merged_at = resolve(item)
         except Exception as error:  # noqa: BLE001 - surfaced as a finding, not a crash
+            hint = ""
+            if "rate limit" in str(error).lower() or "403" in str(error):
+                hint = " (set GH_TOKEN or GITHUB_TOKEN; unauthenticated requests are limited to 60 per hour)"
             findings.append(
                 f"items[{index}] {item.get('owner')}/{item.get('repo')}#{item.get('number')}: "
-                f"could not verify against upstream: {error}"
+                f"could not verify against upstream: {error}{hint}"
             )
             continue
         findings.extend(compare_claim(item, upstream_state, upstream_merged_at, index))

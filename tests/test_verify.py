@@ -69,3 +69,26 @@ class TestVerifyLedger(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestUnreachableHints(unittest.TestCase):
+    def test_rate_limit_suggests_a_token(self):
+        """A first run without a token hits the 60/hour anonymous limit, and the
+        raw urllib error does not say what to do about it."""
+        from mergeledger.model import verify_ledger
+
+        def resolve(_):
+            raise RuntimeError("HTTP Error 403: rate limit exceeded")
+
+        findings = verify_ledger({"items": [item("submitted")]}, resolve)
+        self.assertTrue(any("GH_TOKEN" in f for f in findings), findings)
+
+    def test_other_errors_get_no_token_hint(self):
+        from mergeledger.model import verify_ledger
+
+        def resolve(_):
+            raise RuntimeError("HTTP Error 404: Not Found")
+
+        findings = verify_ledger({"items": [item("submitted")]}, resolve)
+        self.assertTrue(findings)
+        self.assertFalse(any("GH_TOKEN" in f for f in findings))
