@@ -14,7 +14,8 @@ GitHub profiles and resumes often collapse five different states into one word:
 "contributed". A patch prepared locally, a submitted pull request, maintainer
 review, and an accepted merge are not the same evidence.
 
-`mergeledger` keeps those states explicit:
+`mergeledger` keeps those states explicit, and `mergeledger verify` checks each
+one against GitHub so a claim cannot outrun its evidence:
 
 ```text
 prepared → submitted → under_review → merged
@@ -33,11 +34,23 @@ Python 3.9+ is supported. The runtime has no third-party dependencies.
 
 ## Use
 
-Audit claim and privacy boundaries:
+Check structure and privacy boundaries, offline:
 
 ```bash
 mergeledger audit examples/contributions.json
 ```
+
+Check every claim against GitHub, and fail on any overstatement:
+
+```bash
+mergeledger verify contributions.json
+```
+
+`audit` is offline and deliberately limited: it checks that the ledger is
+well-formed and free of private identity data. It cannot tell whether a claim is
+true, because `merged_at` is written by the ledger's own author -- a `merged`
+state with a hand-written timestamp passes `audit` and fails `verify`. Run
+`verify` before publishing anything.
 
 Refresh pull-request states from GitHub:
 

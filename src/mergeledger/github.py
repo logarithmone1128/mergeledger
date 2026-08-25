@@ -66,3 +66,13 @@ def refresh_item(item: dict) -> dict:
     refreshed["updated_at"] = pull_request.get("updated_at")
     refreshed["html_url"] = pull_request.get("html_url")
     return refreshed
+
+
+def resolve_upstream(item: dict) -> tuple[str, str | None]:
+    """Live (state, merged_at) for a ledger item, using the same mapping the
+    refresh path uses so verification and refresh cannot disagree."""
+    pull_request = fetch_pull_request(item["owner"], item["repo"], item["number"])
+    reviews = []
+    if pull_request.get("state") == "open" and not pull_request.get("draft"):
+        reviews = fetch_reviews(item["owner"], item["repo"], item["number"])
+    return normalized_state(pull_request, reviews), pull_request.get("merged_at")

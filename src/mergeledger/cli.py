@@ -8,8 +8,8 @@ import pathlib
 import sys
 from datetime import datetime, timezone
 
-from .github import refresh_item
-from .model import LedgerError, audit_ledger, require_valid_ledger
+from .github import refresh_item, resolve_upstream
+from .model import LedgerError, audit_ledger, require_valid_ledger, verify_ledger
 from .render import render_cards
 
 
@@ -29,7 +29,7 @@ def command_audit(args: argparse.Namespace) -> int:
         for finding in findings:
             print(f"ERROR {finding}")
         return 1
-    print("OK ledger is valid and privacy-safe")
+    print("OK structure and privacy checks passed (claims not checked against GitHub; run `mergeledger verify` for that)")
     return 0
 
 
@@ -41,6 +41,17 @@ def command_render(args: argparse.Namespace) -> int:
         args.output.write_text(rendered, encoding="utf-8")
     else:
         print(rendered, end="")
+    return 0
+
+
+def command_verify(args: argparse.Namespace) -> int:
+    ledger = load_ledger(args.ledger)
+    findings = audit_ledger(ledger) + verify_ledger(ledger, resolve_upstream)
+    if findings:
+        for finding in findings:
+            print(f"ERROR {finding}")
+        return 1
+    print(f"OK every claim is supported by upstream evidence ({len(ledger.get('items') or [])} contribution(s))")
     return 0
 
 
@@ -70,6 +81,12 @@ def build_parser() -> argparse.ArgumentParser:
     render.add_argument("ledger", type=pathlib.Path)
     render.add_argument("--output", "-o", type=pathlib.Path)
     render.set_defaults(handler=command_render)
+
+    verify = subparsers.add_parser(
+        "verify", help="check every claim against GitHub and fail on any overstatement"
+    )
+    verify.add_argument("ledger", type=pathlib.Path)
+    verify.set_defaults(handler=command_verify)
 
     refresh = subparsers.add_parser("refresh", help="refresh states from GitHub")
     refresh.add_argument("ledger", type=pathlib.Path)

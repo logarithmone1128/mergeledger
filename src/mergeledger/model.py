@@ -95,6 +95,74 @@ def audit_ledger(ledger: dict) -> list[str]:
     return findings
 
 
+# Ordered by how strong a public claim each state makes. A recorded state that
+# outranks the upstream evidence is an overstatement, which is the failure this
+# project exists to prevent.
+STATE_STRENGTH = {"prepared": 0, "submitted": 1, "under_review": 2, "merged": 3}
+
+
+def compare_claim(item: dict, upstream_state: str, upstream_merged_at: str | None, index: int) -> list[str]:
+    """Findings where a recorded claim is not supported by upstream evidence.
+
+    Structural validation only checks that a ``merged`` claim carries a
+    ``merged_at`` value -- but that value is written by the ledger's author, so
+    on its own it proves nothing. This compares the claim to the live state.
+    """
+    findings: list[str] = []
+    claimed = item.get("state")
+    ref = f"items[{index}] {item.get('owner')}/{item.get('repo')}#{item.get('number')}"
+
+    if upstream_state == "closed":
+        if claimed == "merged":
+            findings.append(f"{ref}: claims merged but the pull request was closed without merging")
+        elif claimed != "closed":
+            findings.append(f"{ref}: claims {claimed!r} but the pull request is closed")
+        return findings
+
+    claimed_rank = STATE_STRENGTH.get(claimed)
+    upstream_rank = STATE_STRENGTH.get(upstream_state)
+    if claimed_rank is None or upstream_rank is None:
+        return findings
+
+    if claimed_rank > upstream_rank:
+        findings.append(
+            f"{ref}: claims {claimed!r} but upstream evidence supports only {upstream_state!r}"
+        )
+    elif claimed_rank < upstream_rank:
+        findings.append(
+            f"{ref}: recorded as {claimed!r} but upstream is already {upstream_state!r}; refresh the ledger"
+        )
+
+    if claimed == "merged":
+        recorded_merged_at = item.get("merged_at")
+        if not upstream_merged_at:
+            findings.append(f"{ref}: merged claim has no upstream merged_at")
+        elif recorded_merged_at and recorded_merged_at != upstream_merged_at:
+            findings.append(
+                f"{ref}: merged_at {recorded_merged_at!r} does not match upstream {upstream_merged_at!r}"
+            )
+    return findings
+
+
+def verify_ledger(ledger: dict, resolve) -> list[str]:
+    """Check every claim against upstream. ``resolve(item)`` returns
+    ``(state, merged_at)`` so this stays testable without network access."""
+    findings: list[str] = []
+    for index, item in enumerate(ledger.get("items") or []):
+        if not isinstance(item, dict):
+            continue
+        try:
+            upstream_state, upstream_merged_at = resolve(item)
+        except Exception as error:  # noqa: BLE001 - surfaced as a finding, not a crash
+            findings.append(
+                f"items[{index}] {item.get('owner')}/{item.get('repo')}#{item.get('number')}: "
+                f"could not verify against upstream: {error}"
+            )
+            continue
+        findings.extend(compare_claim(item, upstream_state, upstream_merged_at, index))
+    return findings
+
+
 def require_valid_ledger(ledger: dict) -> None:
     findings = audit_ledger(ledger)
     if findings:
